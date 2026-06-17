@@ -149,11 +149,18 @@ export default function HealthDashboardPage() {
       appMap.set(a.id, { industry: a.industry, status: a.status });
     }
 
+    const nameToAppId = new Map<string, string>();
+    for (const a of applications) {
+      nameToAppId.set(a.projectName, a.id);
+    }
+
     const result: ProjectHealthRow[] = BASE_PROJECT_DATA.map((p, idx) => {
-      const existing = metrics.find((m) => m.projectName === p.name);
-      const matched = Array.from(projectMetrics.values()).find(
+      const appId = nameToAppId.get(p.name);
+      const existingByApp = appId ? projectMetrics.get(appId) : undefined;
+      const existingByName = Array.from(projectMetrics.values()).find(
         (v) => v.latest.projectName === p.name,
       );
+      const matched = existingByApp || existingByName;
       const baseDays = [2, 5, 12, 3, 8, 15, 6, 11];
       const days = matched?.days ?? baseDays[idx] ?? 5;
       const status: 'green' | 'yellow' | 'red' =
@@ -161,8 +168,10 @@ export default function HealthDashboardPage() {
       const date = new Date(now - days * 24 * 60 * 60 * 1000);
       const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
+      const finalProjectId = appId || `app_fallback_${idx}`;
+
       return {
-        projectId: existing?.projectId || `p${idx + 1}`,
+        projectId: finalProjectId,
         projectName: p.name,
         industry: p.industry,
         currentUsers: p.users,

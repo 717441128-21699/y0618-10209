@@ -48,22 +48,24 @@ export default function HealthUpdatePage() {
         industry: app.industry,
       };
     }
-    const defaults = [
-      { name: '智云AI助手', industry: '人工智能' },
-      { name: '绿能新材', industry: '新能源' },
-      { name: '健行医疗', industry: '医疗健康' },
-    ];
-    const idx = id ? Math.abs(id.charCodeAt(id.length - 1)) % defaults.length : 0;
+    const fromMetrics = metrics.find((m) => m.projectId === id);
+    if (fromMetrics) {
+      return {
+        projectId: fromMetrics.projectId,
+        projectName: fromMetrics.projectName,
+        industry: '未分类',
+      };
+    }
     return {
       projectId: id || 'app1',
-      projectName: defaults[idx].name,
-      industry: defaults[idx].industry,
+      projectName: `项目 ${id?.slice(-4) || '未知'}`,
+      industry: '未分类',
     };
-  }, [id, applications]);
+  }, [id, applications, metrics]);
 
   const latest = useMemo(() => {
     const existing = metrics
-      .filter((m) => m.projectId === id || m.projectName === projectInfo.projectName)
+      .filter((m) => m.projectId === projectInfo.projectId)
       .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0];
 
     if (existing) {
@@ -78,12 +80,12 @@ export default function HealthUpdatePage() {
       };
     }
     return {
-      days: 3,
-      users: 2400,
-      revenue: 86,
-      funding: 62,
+      days: 30,
+      users: 0,
+      revenue: 0,
+      funding: 0,
     };
-  }, [id, metrics, projectInfo.projectName]);
+  }, [metrics, projectInfo.projectId]);
 
   const lastWeekUsers = latest.users;
   const lastWeekRevenue = latest.revenue;

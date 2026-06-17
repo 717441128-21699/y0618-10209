@@ -86,6 +86,7 @@ export default function MeetingNotePage() {
   const assignments = useMentoringStore((s) => s.assignments);
   const applications = useApplicationStore((s) => s.applications);
   const createMeetingNote = useMentoringStore((s) => s.createMeetingNote);
+  const updateMeetingNote = useMentoringStore((s) => s.updateMeetingNote);
 
   const isNew = id === 'new' || !id;
   const paramProjectId = searchParams.get('projectId');
@@ -150,7 +151,11 @@ export default function MeetingNotePage() {
   const [meetingDate, setMeetingDate] = useState(
     existingNote ? existingNote.meetingDate.slice(0, 10) : todayStr(),
   );
-  const [meetingTime, setMeetingTime] = useState('10:00');
+  const [meetingTime, setMeetingTime] = useState(
+    existingNote
+      ? existingNote.meetingDate.slice(11, 16) || '10:00'
+      : '10:00',
+  );
   const [duration, setDuration] = useState(existingNote?.duration ?? 60);
   const [meetingForm, setMeetingForm] = useState<MeetingForm>('video');
   const [participants, setParticipants] = useState<string[]>([
@@ -160,13 +165,13 @@ export default function MeetingNotePage() {
   const [newParticipant, setNewParticipant] = useState('');
 
   const [topics, setTopics] = useState<string[]>(
-    existingNote?.summary ? ['产品进展', '融资策略'] : ['产品战略', '团队建设'],
+    existingNote ? ['产品进展', '融资策略', '团队建设'] : ['产品战略', '团队建设'],
   );
   const [newTopic, setNewTopic] = useState('');
 
   const [decisions, setDecisions] = useState<string[]>(
-    existingNote?.summary
-      ? [existingNote.summary]
+    existingNote
+      ? []
       : [
           'Q2核心目标聚焦KA客户拓展，暂不扩张SMB市场',
           '启动Pre-A轮融资准备，由导师介绍3家意向机构',
@@ -264,32 +269,39 @@ export default function MeetingNotePage() {
 
   const handleSave = async (confirmType: 'draft' | 'mentor' | 'both') => {
     setSaving(true);
+    const actionItems: ActionItem[] = actions
+      .filter((a) => a.description.trim())
+      .map((a) => ({
+        id: a.id,
+        description: a.description,
+        assignee: a.assignee || '未指定',
+        dueDate: `${a.dueDate}T00:00:00Z`,
+        status:
+          a.status === 'completed'
+            ? 'completed'
+            : a.status === 'overdue'
+              ? 'in_progress'
+              : a.status,
+      }));
+
+    const fullSummary = `${summary}\n\n讨论主题：${topics.join('、')}\n关键决策：${decisions.filter((d) => d.trim()).join('；')}`;
+
     if (isNew) {
-      const actionItems: ActionItem[] = actions
-        .filter((a) => a.description.trim())
-        .map((a) => ({
-          id: a.id,
-          description: a.description,
-          assignee: a.assignee || '未指定',
-          dueDate: `${a.dueDate}T00:00:00Z`,
-          status:
-            a.status === 'completed'
-              ? 'completed'
-              : a.status === 'overdue'
-                ? 'in_progress'
-                : a.status,
-        }));
-
-      const assignmentId =
-        activeAssignment?.id || `ma_${Date.now()}`;
-
+      const assignmentId = activeAssignment?.id || `ma_${Date.now()}`;
       createMeetingNote({
         assignmentId,
         projectId: projectInfo.projectId,
         mentorId: projectInfo.mentorId,
         meetingDate: `${meetingDate}T${meetingTime}:00Z`,
         duration,
-        summary: `${summary}\n\n讨论主题：${topics.join('、')}\n关键决策：${decisions.filter((d) => d.trim()).join('；')}`,
+        summary: fullSummary,
+        actionItems,
+      });
+    } else if (existingNote) {
+      updateMeetingNote(existingNote.id, {
+        meetingDate: `${meetingDate}T${meetingTime}:00Z`,
+        duration,
+        summary: fullSummary,
         actionItems,
       });
     }

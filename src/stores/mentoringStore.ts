@@ -31,6 +31,10 @@ interface MentoringState {
     actionId: string,
     status: ActionItem['status'],
   ) => void;
+  updateMeetingNote: (
+    meetingId: string,
+    data: Partial<Pick<MeetingNote, 'meetingDate' | 'duration' | 'summary' | 'actionItems'>>,
+  ) => void;
 }
 
 const nowIso = () => new Date().toISOString();
@@ -92,6 +96,23 @@ export const useMentoringStore = create<MentoringState>()(
               actionItems: mn.actionItems.map((ai) =>
                 ai.id === actionId ? { ...ai, status } : ai,
               ),
+            };
+          }),
+        });
+      },
+
+      updateMeetingNote: (meetingId, data) => {
+        set({
+          meetingNotes: get().meetingNotes.map((mn) => {
+            if (mn.id !== meetingId) return mn;
+            const updatedActionItems =
+              data.actionItems !== undefined ? data.actionItems : mn.actionItems;
+            return {
+              ...mn,
+              meetingDate: data.meetingDate ?? mn.meetingDate,
+              duration: data.duration ?? mn.duration,
+              summary: data.summary ?? mn.summary,
+              actionItems: updatedActionItems,
             };
           }),
         });
