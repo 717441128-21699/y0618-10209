@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   DollarSign,
@@ -13,6 +13,7 @@ import {
   TrendingDown,
   RefreshCw,
   Filter,
+  CheckCircle2,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import {
@@ -219,6 +220,28 @@ export default function HealthDashboardPage() {
     });
   };
 
+  const [toast, setToast] = useState<{ message: string; variant?: 'success' | 'info' } | null>(null);
+
+  const showToast = useCallback((message: string, variant?: 'success' | 'info') => {
+    setToast({ message, variant });
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const handleBatchRemind = () => {
+    const targetProjects = selectedProjects.size > 0
+      ? rows.filter((r) => selectedProjects.has(r.projectId) && r.status !== 'green')
+      : rows.filter((r) => r.status !== 'green');
+    if (targetProjects.length === 0) {
+      showToast('没有需要催更的项目', 'info');
+      return;
+    }
+    showToast(`已向 ${targetProjects.length} 个滞后项目发送催更提醒`, 'success');
+  };
+
+  const handleSingleRemind = (projectName: string) => {
+    showToast(`已向「${projectName}」发送催更提醒`, 'success');
+  };
+
   return (
     <PageContainer
       title="项目健康度看板"
@@ -229,7 +252,7 @@ export default function HealthDashboardPage() {
             <Download className="h-4 w-4" />
             导出周报
           </Button>
-          <Button variant="secondary" className="gap-2">
+          <Button variant="secondary" className="gap-2" onClick={handleBatchRemind}>
             <Bell className="h-4 w-4" />
             批量催更
             {rows.filter((r) => r.status !== 'green').length > 0 && (
@@ -241,6 +264,21 @@ export default function HealthDashboardPage() {
         </>
       }
     >
+      <AnimatePresence>{toast && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20 }}
+          className={cn(
+            'fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl flex items-center gap-2.5',
+            toast.variant === 'success' && 'bg-emerald-600 text-white shadow-emerald-300/40',
+            (!toast.variant || toast.variant === 'info') && 'bg-slate-800 text-white shadow-slate-300/40',
+          )}
+        >
+          <CheckCircle2 className="w-5 h-5" />
+          <span className="text-sm font-medium">{toast.message}</span>
+        </motion.div>
+      )}</AnimatePresence>
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -730,7 +768,7 @@ export default function HealthDashboardPage() {
                                 size="sm"
                                 variant="outline"
                                 className="h-8 text-xs gap-1 px-2.5"
-                                onClick={() => navigate(`/health/${r.projectId}`)}
+                                onClick={() => navigate(`/health/update/${r.projectId}`)}
                               >
                                 <Eye className="h-3.5 w-3.5" />
                                 详情
@@ -740,6 +778,7 @@ export default function HealthDashboardPage() {
                                   size="sm"
                                   variant="secondary"
                                   className="h-8 text-xs gap-1 px-2.5"
+                                  onClick={() => handleSingleRemind(r.projectName)}
                                 >
                                   <Bell className="h-3.5 w-3.5" />
                                   催更

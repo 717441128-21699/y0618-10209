@@ -226,7 +226,7 @@ export default function ReviewFormPage() {
       }
       if (id) updateApplicationStatus(id, 'reviewed');
       showToast('评审提交成功！', 'success');
-      setTimeout(() => navigate('/review-center'), 1200);
+      setTimeout(() => navigate('/reviews'), 1200);
     } finally {
       setIsSubmitting(false);
     }
@@ -237,7 +237,7 @@ export default function ReviewFormPage() {
       <PageContainer
         title="项目评审"
         actions={
-          <Button variant="outline" icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/review-center')}>
+          <Button variant="outline" icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/reviews')}>
             返回评审中心
           </Button>
         }
@@ -247,7 +247,7 @@ export default function ReviewFormPage() {
           title="项目不存在"
           description="您查看的项目申请不存在或已被删除"
           iconVariant="slate"
-          action={{ label: '返回评审中心', onClick: () => navigate('/review-center'), icon: <ArrowLeft /> }}
+          action={{ label: '返回评审中心', onClick: () => navigate('/reviews'), icon: <ArrowLeft /> }}
         />
       </PageContainer>
     );
@@ -275,7 +275,7 @@ export default function ReviewFormPage() {
       subtitle="请根据项目资料对五个维度进行专业评分并给出评审意见"
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="outline" icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/review-center')}>
+          <Button variant="outline" icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/reviews')}>
             返回评审中心
           </Button>
           <Badge variant={getStatusBadgeVariant(application.status)} dot className="px-3 py-1.5 text-xs">

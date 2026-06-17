@@ -441,7 +441,7 @@ export default function ReviewCenterPage() {
                           size="sm"
                           variant={myCompleted.length > 0 ? 'outline' : 'primary'}
                           icon={<ClipboardCheck className="w-3.5 h-3.5" />}
-                          onClick={() => navigate(`/review/${app.id}`)}
+                          onClick={() => navigate(`/reviews/${app.id}`)}
                           className={cn(
                             'h-9',
                             myCompleted.length === 0 && 'shadow-sm shadow-indigo-200/50',

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
   Target,
@@ -23,6 +23,9 @@ import {
   Edit3,
   Eye,
   Award,
+  X,
+  MapPin,
+  UserPlus,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import {
@@ -133,6 +136,34 @@ export default function ApplicationDetailPage() {
   const canReject = ['reviewing', 'reviewed'].includes(application.status);
   const canConfirmBatch = ['accepted'].includes(application.status);
   const canEdit = ['draft', 'submitted'].includes(application.status);
+
+  const [defenseModalOpen, setDefenseModalOpen] = useState(false);
+  const [defenseDate, setDefenseDate] = useState('');
+  const [defenseTime, setDefenseTime] = useState('10:00');
+  const [defenseLocation, setDefenseLocation] = useState('加速器路演厅A');
+  const [defensePanel, setDefensePanel] = useState<string[]>(['u4']);
+  const [defenseSuccess, setDefenseSuccess] = useState(false);
+
+  const handleScheduleDefense = () => {
+    if (!defenseDate) return;
+    setDefenseSuccess(true);
+    setTimeout(() => {
+      setDefenseModalOpen(false);
+      setDefenseSuccess(false);
+    }, 1500);
+  };
+
+  const availableJudges = [
+    { id: 'u2', name: '李运营', role: '运营总监' },
+    { id: 'u3', name: '张投资', role: '投资合伙人' },
+    { id: 'u4', name: '王评审', role: '资深评审' },
+  ];
+
+  const toggleJudge = (judgeId: string) => {
+    setDefensePanel((prev) =>
+      prev.includes(judgeId) ? prev.filter((id) => id !== judgeId) : [...prev, judgeId]
+    );
+  };
 
   return (
     <PageContainer
@@ -534,7 +565,7 @@ export default function ApplicationDetailPage() {
                     icon={<Eye className="w-4 h-4" />}
                     onClick={() => {
                       updateApplicationStatus(application.id, 'reviewing');
-                      navigate(`/review/${application.id}`);
+                      navigate(`/reviews/${application.id}`);
                     }}
                     className="h-11 shadow-sm"
                   >
@@ -546,7 +577,7 @@ export default function ApplicationDetailPage() {
                     fullWidth
                     variant="primary"
                     icon={<ClipboardCheck className="w-4 h-4" />}
-                    onClick={() => navigate(`/review/${application.id}`)}
+                    onClick={() => navigate(`/reviews/${application.id}`)}
                     className="h-11 shadow-sm"
                   >
                     继续评审
@@ -557,7 +588,7 @@ export default function ApplicationDetailPage() {
                     fullWidth
                     variant="outline"
                     icon={<CalendarPlus className="w-4 h-4" />}
-                    onClick={() => {}}
+                    onClick={() => setDefenseModalOpen(true)}
                     className="h-11"
                   >
                     安排答辩
@@ -616,6 +647,167 @@ export default function ApplicationDetailPage() {
           </motion.div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {defenseModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+              onClick={() => !defenseSuccess || setDefenseModalOpen(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              {defenseSuccess ? (
+                <div className="p-10 text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
+                    className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center"
+                  >
+                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">答辩已安排</h3>
+                  <p className="text-sm text-slate-500">
+                    {defenseDate} {defenseTime} · {defenseLocation}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50/60 to-transparent">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <CalendarPlus className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">安排项目答辩</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">{application.projectName}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setDefenseModalOpen(false)}
+                      className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                          <CalendarDays className="w-3.5 h-3.5 inline mr-1.5 -translate-y-0.5" />
+                          答辩日期
+                        </label>
+                        <input
+                          type="date"
+                          value={defenseDate}
+                          onChange={(e) => setDefenseDate(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                          <Clock className="w-3.5 h-3.5 inline mr-1.5 -translate-y-0.5" />
+                          开始时间
+                        </label>
+                        <input
+                          type="time"
+                          value={defenseTime}
+                          onChange={(e) => setDefenseTime(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                        <MapPin className="w-3.5 h-3.5 inline mr-1.5 -translate-y-0.5" />
+                        答辩地点
+                      </label>
+                      <select
+                        value={defenseLocation}
+                        onChange={(e) => setDefenseLocation(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white"
+                      >
+                        <option>加速器路演厅A</option>
+                        <option>加速器路演厅B</option>
+                        <option>多功能会议室</option>
+                        <option>线上视频会议</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
+                        <UserPlus className="w-3.5 h-3.5" />
+                        答辩委员会
+                        <span className="text-slate-400 font-normal">（已选 {defensePanel.length} 人）</span>
+                      </label>
+                      <div className="space-y-2">
+                        {availableJudges.map((judge) => {
+                          const selected = defensePanel.includes(judge.id);
+                          return (
+                            <label
+                              key={judge.id}
+                              className={cn(
+                                'flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all',
+                                selected
+                                  ? 'border-indigo-500 bg-indigo-50/60'
+                                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleJudge(judge.id)}
+                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-slate-800">{judge.name}</p>
+                                <p className="text-xs text-slate-500">{judge.role}</p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                    <Button
+                      variant="outline"
+                      fullWidth
+                      onClick={() => setDefenseModalOpen(false)}
+                      className="h-11"
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={handleScheduleDefense}
+                      disabled={!defenseDate || defensePanel.length === 0}
+                      className="h-11 shadow-sm shadow-indigo-200/50"
+                    >
+                      确认安排
+                    </Button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageContainer>
   );
 }

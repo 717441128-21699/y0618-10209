@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -131,6 +131,8 @@ const LOGO_COLORS = [
   'bg-teal-500',
 ];
 
+const DRAFT_STORAGE_KEY = 'demo-day-score-draft';
+
 export default function DemoScorePage() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
@@ -151,6 +153,47 @@ export default function DemoScorePage() {
   const [interest, setInterest] = useState<InterestLevel>('medium');
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant?: 'success' | 'info' } | null>(null);
+
+  const showToast = useCallback((message: string, variant?: 'success' | 'info') => {
+    setToast({ message, variant });
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      const raw = localStorage.getItem(`${DRAFT_STORAGE_KEY}-${projectId}`);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.scores) setScores(draft.scores);
+        if (draft.interest) setInterest(draft.interest);
+        if (draft.comment !== undefined) setComment(draft.comment);
+      }
+    } catch (e) {
+      console.error('Failed to load draft score', e);
+    }
+  }, [projectId]);
+
+  const handleSaveDraft = () => {
+    if (!projectId) return;
+    try {
+      const draft = { scores, interest, comment, savedAt: new Date().toISOString() };
+      localStorage.setItem(`${DRAFT_STORAGE_KEY}-${projectId}`, JSON.stringify(draft));
+      showToast('评分已暂存，下次进入可继续编辑', 'success');
+    } catch (e) {
+      showToast('暂存失败，请重试', 'info');
+    }
+  };
+
+  const clearDraft = useCallback(() => {
+    if (!projectId) return;
+    try {
+      localStorage.removeItem(`${DRAFT_STORAGE_KEY}-${projectId}`);
+    } catch (e) {
+      console.error('Failed to clear draft', e);
+    }
+  }, [projectId]);
 
   const total = useMemo(
     () => scores.team + scores.market + scores.product + scores.value,
@@ -184,6 +227,7 @@ export default function DemoScorePage() {
       },
       comment,
     });
+    clearDraft();
     setSubmitted(true);
   };
 
@@ -326,6 +370,21 @@ export default function DemoScorePage() {
         </div>
       }
     >
+      <AnimatePresence>{toast && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20 }}
+          className={cn(
+            'fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-xl flex items-center gap-2.5',
+            toast.variant === 'success' && 'bg-emerald-600 text-white shadow-emerald-300/40',
+            (!toast.variant || toast.variant === 'info') && 'bg-slate-800 text-white shadow-slate-300/40',
+          )}
+        >
+          <CheckCircle2 className="w-5 h-5" />
+          <span className="text-sm font-medium">{toast.message}</span>
+        </motion.div>
+      )}</AnimatePresence>
       <div className="max-w-3xl mx-auto space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -655,6 +714,7 @@ export default function DemoScorePage() {
               fullWidth
               size="lg"
               icon={<Save className="h-4 w-4" />}
+              onClick={handleSaveDraft}
             >
               暂存评分
             </Button>

@@ -482,7 +482,7 @@ export default function MentoringOverviewPage() {
                               size="sm"
                               variant="outline"
                               className="text-xs h-8"
-                              onClick={() => navigate(`/meeting-notes/${p.id}`)}
+                              onClick={() => navigate(`/mentoring/meetings/${p.projectId}`)}
                             >
                               <FileText className="h-3.5 w-3.5 mr-1" />
                               查看纪要
