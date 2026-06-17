@@ -9,6 +9,7 @@ import ReviewCenterPage from '@/pages/ReviewCenterPage';
 import ReviewFormPage from '@/pages/ReviewFormPage';
 import MentoringOverviewPage from '@/pages/MentoringOverviewPage';
 import MeetingNotePage from '@/pages/MeetingNotePage';
+import ProjectMeetingsPage from '@/pages/ProjectMeetingsPage';
 import HealthDashboardPage from '@/pages/HealthDashboardPage';
 import HealthUpdatePage from '@/pages/HealthUpdatePage';
 import DemoDayPage from '@/pages/DemoDayPage';
@@ -36,6 +37,7 @@ export default function App() {
                 <Route path="/reviews" element={<ReviewCenterPage />} />
                 <Route path="/reviews/:id" element={<ReviewFormPage />} />
                 <Route path="/mentoring" element={<MentoringOverviewPage />} />
+                <Route path="/mentoring/projects/:projectId/meetings" element={<ProjectMeetingsPage />} />
                 <Route path="/mentoring/meetings/:id" element={<MeetingNotePage />} />
                 <Route path="/mentoring/meetings/new" element={<MeetingNotePage />} />
                 <Route path="/health" element={<HealthDashboardPage />} />

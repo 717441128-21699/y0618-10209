@@ -46,6 +46,7 @@ interface MentorGroup {
     actionItemCount: number;
     healthScore: number;
     status: string;
+    mentorId: string;
   }[];
 }
 
@@ -255,6 +256,7 @@ export default function MentoringOverviewPage() {
         actionItemCount: actionCountByProject.get(as.projectId) || Math.floor(Math.random() * 6) + 1,
         healthScore: healthMap.get(as.projectId) || Math.floor(Math.random() * 30) + 60,
         status: as.status,
+        mentorId: as.mentorId,
       });
     }
     return Array.from(byMentor.values());
@@ -482,7 +484,7 @@ export default function MentoringOverviewPage() {
                               size="sm"
                               variant="outline"
                               className="text-xs h-8"
-                              onClick={() => navigate(`/mentoring/meetings/${p.projectId}`)}
+                              onClick={() => navigate(`/mentoring/projects/${p.projectId}/meetings`)}
                             >
                               <FileText className="h-3.5 w-3.5 mr-1" />
                               查看纪要
@@ -490,7 +492,11 @@ export default function MentoringOverviewPage() {
                             <Button
                               size="sm"
                               className="text-xs h-8"
-                              onClick={() => navigate('/meeting-notes/new')}
+                              onClick={() =>
+                                navigate(
+                                  `/mentoring/meetings/new?projectId=${p.projectId}&mentorId=${p.mentorId}`,
+                                )
+                              }
                             >
                               <Plus className="h-3.5 w-3.5 mr-1" />
                               新建辅导

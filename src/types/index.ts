@@ -16,6 +16,7 @@ export type ApplicationStatus =
   | 'submitted'
   | 'reviewing'
   | 'reviewed'
+  | 'defense_scheduled'
   | 'accepted'
   | 'rejected'
   | 'in_batch'
@@ -85,6 +86,15 @@ export interface Application {
   founders?: Founder[];
   timeline?: TimelineEvent[];
   logo?: string;
+  defense?: {
+    scheduledAt: string;
+    location: string;
+    panelIds: string[];
+    panelNames?: string[];
+    result?: 'pass' | 'fail' | 'conditional';
+    score?: number;
+    notes?: string;
+  };
 }
 
 export interface ReviewScore {
@@ -169,6 +179,17 @@ export interface MeetingNote {
   summary: string;
   actionItems: ActionItem[];
   createdAt: string;
+}
+
+export interface HealthReminder {
+  id: string;
+  projectId: string;
+  projectName: string;
+  remindedAt: string;
+  remindedBy: string;
+  status: 'pending' | 'handled';
+  handledAt?: string;
+  batchId?: string;
 }
 
 export interface HealthMetric {

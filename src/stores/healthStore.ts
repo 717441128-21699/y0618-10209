@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { HealthMetric } from '../types';
+import type { HealthMetric, HealthReminder } from '../types';
 import { mockHealthMetrics } from '../mock/mockData';
 
 interface HealthState {
   metrics: HealthMetric[];
+  reminders: HealthReminder[];
   getMetricsByProject: (projectId: string) => HealthMetric[];
   getLatestMetricsByProject: (projectId: string) => HealthMetric | undefined;
   getOverdueProjects: () => string[];
@@ -18,6 +19,19 @@ interface HealthState {
     },
   ) => HealthMetric;
   isProjectOverdue: (projectId: string) => boolean;
+  createReminder: (
+    projectId: string,
+    projectName: string,
+    remindedBy?: string,
+    batchId?: string,
+  ) => HealthReminder;
+  batchCreateReminders: (
+    projects: { projectId: string; projectName: string }[],
+    remindedBy?: string,
+  ) => HealthReminder[];
+  getRemindersByProject: (projectId: string) => HealthReminder[];
+  getPendingReminders: () => HealthReminder[];
+  markRemindersHandled: (projectId: string) => void;
 }
 
 const nowIso = () => new Date().toISOString();
@@ -30,6 +44,7 @@ export const useHealthStore = create<HealthState>()(
   persist(
     (set, get) => ({
       metrics: mockHealthMetrics,
+      reminders: [],
 
       getMetricsByProject: (projectId) => {
         return get()
@@ -71,7 +86,21 @@ export const useHealthStore = create<HealthState>()(
           notes: data.notes ?? '',
           recordedBy: data.recordedBy,
         };
-        set({ metrics: [metric, ...get().metrics] });
+        const pendingForProject = get().reminders.filter(
+          (r) => r.projectId === data.projectId && r.status === 'pending',
+        );
+        const updatedReminders =
+          pendingForProject.length > 0
+            ? get().reminders.map((r) =>
+                r.projectId === data.projectId && r.status === 'pending'
+                  ? { ...r, status: 'handled' as const, handledAt: nowIso() }
+                  : r,
+              )
+            : get().reminders;
+        set({
+          metrics: [metric, ...get().metrics],
+          reminders: updatedReminders,
+        });
         return metric;
       },
 
@@ -79,6 +108,57 @@ export const useHealthStore = create<HealthState>()(
         const latest = get().getLatestMetricsByProject(projectId);
         if (!latest) return true;
         return Date.now() - new Date(latest.recordedAt).getTime() > SEVEN_DAYS_MS;
+      },
+
+      createReminder: (projectId, projectName, remindedBy = 'system', batchId) => {
+        const reminder: HealthReminder = {
+          id: uid('hr_'),
+          projectId,
+          projectName,
+          remindedAt: nowIso(),
+          remindedBy,
+          status: 'pending',
+          batchId,
+        };
+        set({ reminders: [reminder, ...get().reminders] });
+        return reminder;
+      },
+
+      batchCreateReminders: (projects, remindedBy = 'system') => {
+        const batchId = `batch_${Date.now().toString(36)}`;
+        const now = nowIso();
+        const newReminders: HealthReminder[] = projects.map((p) => ({
+          id: uid('hr_'),
+          projectId: p.projectId,
+          projectName: p.projectName,
+          remindedAt: now,
+          remindedBy,
+          status: 'pending',
+          batchId,
+        }));
+        set({ reminders: [...newReminders, ...get().reminders] });
+        return newReminders;
+      },
+
+      getRemindersByProject: (projectId) => {
+        return get()
+          .reminders.filter((r) => r.projectId === projectId)
+          .sort((a, b) => b.remindedAt.localeCompare(a.remindedAt));
+      },
+
+      getPendingReminders: () => {
+        return get().reminders.filter((r) => r.status === 'pending');
+      },
+
+      markRemindersHandled: (projectId) => {
+        const now = nowIso();
+        set({
+          reminders: get().reminders.map((r) =>
+            r.projectId === projectId && r.status === 'pending'
+              ? { ...r, status: 'handled' as const, handledAt: now }
+              : r,
+          ),
+        });
       },
     }),
     {

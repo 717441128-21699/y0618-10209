@@ -220,6 +220,9 @@ export default function HealthDashboardPage() {
     });
   };
 
+  const batchCreateReminders = useHealthStore((s) => s.batchCreateReminders);
+  const createReminder = useHealthStore((s) => s.createReminder);
+
   const [toast, setToast] = useState<{ message: string; variant?: 'success' | 'info' } | null>(null);
 
   const showToast = useCallback((message: string, variant?: 'success' | 'info') => {
@@ -235,10 +238,15 @@ export default function HealthDashboardPage() {
       showToast('没有需要催更的项目', 'info');
       return;
     }
+    batchCreateReminders(
+      targetProjects.map((r) => ({ projectId: r.projectId, projectName: r.projectName })),
+      'admin',
+    );
     showToast(`已向 ${targetProjects.length} 个滞后项目发送催更提醒`, 'success');
   };
 
-  const handleSingleRemind = (projectName: string) => {
+  const handleSingleRemind = (projectId: string, projectName: string) => {
+    createReminder(projectId, projectName, 'admin');
     showToast(`已向「${projectName}」发送催更提醒`, 'success');
   };
 
@@ -778,7 +786,7 @@ export default function HealthDashboardPage() {
                                   size="sm"
                                   variant="secondary"
                                   className="h-8 text-xs gap-1 px-2.5"
-                                  onClick={() => handleSingleRemind(r.projectName)}
+                                  onClick={() => handleSingleRemind(r.projectId, r.projectName)}
                                 >
                                   <Bell className="h-3.5 w-3.5" />
                                   催更

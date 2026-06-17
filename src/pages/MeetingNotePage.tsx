@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Calendar as CalendarIcon,
@@ -80,6 +80,7 @@ function addDaysStr(days: number): string {
 
 export default function MeetingNotePage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const meetingNotes = useMentoringStore((s) => s.meetingNotes);
   const assignments = useMentoringStore((s) => s.assignments);
@@ -87,10 +88,12 @@ export default function MeetingNotePage() {
   const createMeetingNote = useMentoringStore((s) => s.createMeetingNote);
 
   const isNew = id === 'new' || !id;
+  const paramProjectId = searchParams.get('projectId');
+  const paramMentorId = searchParams.get('mentorId');
 
   const existingNote = useMemo(() => {
     if (isNew) return null;
-    return meetingNotes.find((m) => m.id === id || m.assignmentId === id);
+    return meetingNotes.find((m) => m.id === id);
   }, [id, isNew, meetingNotes]);
 
   const projectInfo = useMemo(() => {
@@ -101,11 +104,30 @@ export default function MeetingNotePage() {
         projectName: app?.projectName || '智云AI助手',
         industry: app?.industry || '人工智能',
         mentorId: existingNote.mentorId,
-        mentorName: assignments.find((a) => a.mentorId === existingNote.mentorId)?.mentorName || '赵导师',
+        mentorName:
+          assignments.find((a) => a.mentorId === existingNote.mentorId)?.mentorName ||
+          '赵导师',
+      };
+    }
+    if (paramProjectId) {
+      const app = applications.find((a) => a.id === paramProjectId);
+      const asn = assignments.find(
+        (a) =>
+          a.projectId === paramProjectId &&
+          (paramMentorId ? a.mentorId === paramMentorId : a.status === 'active'),
+      );
+      return {
+        projectId: paramProjectId,
+        projectName: app?.projectName || asn?.projectName || '项目',
+        industry: app?.industry || '未分类',
+        mentorId: asn?.mentorId || paramMentorId || 'u5',
+        mentorName: asn?.mentorName || '导师',
       };
     }
     const active = assignments.find((a) => a.status === 'active') || assignments[0];
-    const app = active ? applications.find((a) => a.id === active.projectId) : applications[0];
+    const app = active
+      ? applications.find((a) => a.id === active.projectId)
+      : applications[0];
     return {
       projectId: active?.projectId || 'app1',
       projectName: app?.projectName || '智云AI助手',
@@ -113,7 +135,17 @@ export default function MeetingNotePage() {
       mentorId: active?.mentorId || 'u5',
       mentorName: active?.mentorName || '赵导师',
     };
-  }, [existingNote, assignments, applications]);
+  }, [existingNote, assignments, applications, paramProjectId, paramMentorId]);
+
+  const activeAssignment = useMemo(() => {
+    return assignments.find(
+      (a) => a.projectId === projectInfo.projectId && a.mentorId === projectInfo.mentorId,
+    ) || assignments.find((a) => a.projectId === projectInfo.projectId && a.status === 'active');
+  }, [assignments, projectInfo.projectId, projectInfo.mentorId]);
+
+  const returnToList = () => {
+    navigate(`/mentoring/projects/${projectInfo.projectId}/meetings`);
+  };
 
   const [meetingDate, setMeetingDate] = useState(
     existingNote ? existingNote.meetingDate.slice(0, 10) : todayStr(),
@@ -248,8 +280,11 @@ export default function MeetingNotePage() {
                 : a.status,
         }));
 
+      const assignmentId =
+        activeAssignment?.id || `ma_${Date.now()}`;
+
       createMeetingNote({
-        assignmentId: `ma_${Date.now()}`,
+        assignmentId,
         projectId: projectInfo.projectId,
         mentorId: projectInfo.mentorId,
         meetingDate: `${meetingDate}T${meetingTime}:00Z`,
@@ -260,7 +295,7 @@ export default function MeetingNotePage() {
     }
     await new Promise((r) => setTimeout(r, 600));
     setSaving(false);
-    navigate('/mentoring');
+    returnToList();
   };
 
   return (
@@ -269,9 +304,9 @@ export default function MeetingNotePage() {
       subtitle={isNew ? '新建辅导记录' : '编辑辅导会面内容'}
       actions={
         <>
-          <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2">
+          <Button variant="ghost" onClick={returnToList} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
-            返回
+            返回辅导记录
           </Button>
           <Badge variant="indigo" className="text-xs px-3 py-1">
             {projectInfo.projectName} · {projectInfo.industry}

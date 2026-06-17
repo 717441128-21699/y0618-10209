@@ -99,6 +99,7 @@ export default function ApplicationDetailPage() {
 
   const getApplicationById = useApplicationStore((s) => s.getApplicationById);
   const updateApplicationStatus = useApplicationStore((s) => s.updateApplicationStatus);
+  const scheduleDefense = useApplicationStore((s) => s.scheduleDefense);
   const application = id ? getApplicationById(id) : undefined;
 
   const getReviewsByApplication = useReviewStore((s) => s.getReviewsByApplication);
@@ -131,8 +132,8 @@ export default function ApplicationDetailPage() {
   }
 
   const canStartReview = ['submitted'].includes(application.status);
-  const canScheduleDefense = ['reviewed', 'accepted'].includes(application.status);
-  const canAccept = ['reviewed'].includes(application.status);
+  const canScheduleDefense = ['reviewed', 'defense_scheduled', 'accepted'].includes(application.status);
+  const canAccept = ['reviewed', 'defense_scheduled'].includes(application.status);
   const canReject = ['reviewing', 'reviewed'].includes(application.status);
   const canConfirmBatch = ['accepted'].includes(application.status);
   const canEdit = ['draft', 'submitted'].includes(application.status);
@@ -144,13 +145,44 @@ export default function ApplicationDetailPage() {
   const [defensePanel, setDefensePanel] = useState<string[]>(['u4']);
   const [defenseSuccess, setDefenseSuccess] = useState(false);
 
+  const openDefenseModal = () => {
+    if (application?.defense) {
+      const dt = new Date(application.defense.scheduledAt);
+      setDefenseDate(dt.toISOString().slice(0, 10));
+      setDefenseTime(
+        `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`,
+      );
+      setDefenseLocation(application.defense.location);
+      setDefensePanel(application.defense.panelIds);
+    } else {
+      setDefenseDate('');
+      setDefenseTime('10:00');
+      setDefenseLocation('加速器路演厅A');
+      setDefensePanel(['u4']);
+    }
+    setDefenseSuccess(false);
+    setDefenseModalOpen(true);
+  };
+
   const handleScheduleDefense = () => {
-    if (!defenseDate) return;
+    if (!defenseDate || !application) return;
+    const scheduledAt = new Date(`${defenseDate}T${defenseTime}:00`).toISOString();
+    const panelNames = defensePanel
+      .map((jid) => availableJudges.find((j) => j.id === jid)?.name)
+      .filter(Boolean) as string[];
+
+    scheduleDefense(application.id, {
+      scheduledAt,
+      location: defenseLocation,
+      panelIds: defensePanel,
+      panelNames,
+    });
+
     setDefenseSuccess(true);
     setTimeout(() => {
       setDefenseModalOpen(false);
       setDefenseSuccess(false);
-    }, 1500);
+    }, 1200);
   };
 
   const availableJudges = [
@@ -583,15 +615,55 @@ export default function ApplicationDetailPage() {
                     继续评审
                   </Button>
                 )}
+                {application.defense && (
+                  <div className="mb-4 p-4 rounded-xl bg-indigo-50/60 border border-indigo-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center">
+                        <CalendarDays className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-semibold text-indigo-900">答辩已安排</span>
+                    </div>
+                    <div className="space-y-1.5 text-xs text-slate-600 ml-9">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {new Date(application.defense.scheduledAt).toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}{' '}
+                          {new Date(application.defense.scheduledAt).toLocaleTimeString('zh-CN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{application.defense.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {(application.defense.panelNames || application.defense.panelIds)
+                            .slice(0, 2)
+                            .join('、')}
+                          {application.defense.panelIds.length > 2 &&
+                            ` 等${application.defense.panelIds.length}人`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {canScheduleDefense && (
                   <Button
                     fullWidth
-                    variant="outline"
+                    variant={application.defense ? 'outline' : 'primary'}
                     icon={<CalendarPlus className="w-4 h-4" />}
-                    onClick={() => setDefenseModalOpen(true)}
+                    onClick={openDefenseModal}
                     className="h-11"
                   >
-                    安排答辩
+                    {application.defense ? '修改答辩安排' : '安排答辩'}
                   </Button>
                 )}
                 {canAccept && (

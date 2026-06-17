@@ -19,6 +19,10 @@ interface ApplicationState {
   updateMilestone: (applicationId: string, milestoneId: string, data: Partial<Milestone>) => void;
   removeMilestone: (applicationId: string, milestoneId: string) => void;
   saveDraft: (id: string, data: Partial<Application>) => void;
+  scheduleDefense: (
+    id: string,
+    defense: { scheduledAt: string; location: string; panelIds: string[]; panelNames?: string[] },
+  ) => void;
 }
 
 const nowIso = () => new Date().toISOString();
@@ -148,6 +152,7 @@ export const useApplicationStore = create<ApplicationState>()(
           submitted: '提交申请',
           reviewing: '开始评审',
           reviewed: '完成评审',
+          defense_scheduled: '安排答辩',
           accepted: '初审通过',
           rejected: '申请拒绝',
           in_batch: '确认入营',
@@ -279,6 +284,35 @@ export const useApplicationStore = create<ApplicationState>()(
                   ...a,
                   milestones: (a.milestones ?? []).filter((m) => m.id !== milestoneId),
                   updatedAt: nowIso(),
+                }
+              : a,
+          );
+        set({
+          applications: update(get().applications),
+          drafts: update(get().drafts),
+        });
+      },
+
+      scheduleDefense: (id, defense) => {
+        const now = nowIso();
+        const update = (list: Application[]): Application[] =>
+          list.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: 'defense_scheduled' as const,
+                  defense,
+                  updatedAt: now,
+                  timeline: [
+                    ...(a.timeline ?? []),
+                    {
+                      id: uid('tl_'),
+                      status: 'defense_scheduled' as const,
+                      title: '安排答辩',
+                      description: `答辩时间：${new Date(defense.scheduledAt).toLocaleString()}，地点：${defense.location}`,
+                      timestamp: now,
+                    },
+                  ],
                 }
               : a,
           );
